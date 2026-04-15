@@ -1,0 +1,46 @@
+FILE: model_setup.py
+FUNCTION: initialize_recognizer()
+LINES: 5-25
+
+PURPOSE:
+Initializes and configures the MediaPipe gesture recognizer model, automatically 
+downloading it if not already present locally.
+
+WHAT IT DOES:
+
+• Line 6: Defines the URL pointing to the pre-trained gesture recognizer model 
+  hosted on Google Cloud Storage (about 50-100 MB)
+  
+• Line 7: Sets the local file path where model will be stored 
+  ('gesture_recognizer.task' in project root)
+  
+• Lines 8-10: Checks if model file exists locally
+  - If model doesn't exist: prints "Pobieranie modelu..." message, downloads from URL 
+    using urllib.request.urlretrieve(), then prints confirmation message
+  - If model exists: skips download and proceeds to configuration
+  
+• Lines 12-14: Imports three required MediaPipe task components:
+  - BaseOptions: Base configuration class
+  - GestureRecognizer: Main gesture recognition class
+  - GestureRecognizerOptions: Configuration options for recognizer
+  - VisionRunningMode: Enumeration of operating modes (IMAGE, VIDEO, LIVE_STREAM)
+  
+• Lines 17-23: Creates and configures GestureRecognizerOptions object with:
+  - Line 18: base_options - Points to local model file path
+  - Line 19: running_mode - Set to VIDEO mode for processing video streams 
+    (processes with timestamp data for temporal continuity)
+  - Line 20: num_hands - Limits detection to maximum 1 hand per frame
+  - Line 21: min_hand_detection_confidence - Requires 70% confidence to detect hand
+  - Line 22: min_hand_presence_confidence - Requires 70% confidence hand is present
+  - Line 23: min_tracking_confidence - Requires 70% confidence to track hand landmarks
+  
+• Line 25: Returns tuple of:
+  - GestureRecognizer class (for creating recognizer instance in main.py)
+  - options object containing all configuration settings
+
+KEY CHARACTERISTICS:
+• Model auto-downloads on first run (requires internet connection)
+• High confidence thresholds (0.7) reduce false positives
+• Optimized for single-hand detection and real-time video processing
+• Returns objects immediately usable by main() to create recognizer instance
+• Confidence values of 0.7 are good balance between accuracy and responsiveness

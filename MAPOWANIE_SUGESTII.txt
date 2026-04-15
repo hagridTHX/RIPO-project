@@ -1,0 +1,99 @@
+MAPOWANIE SUGESTII DO ODPOWIEDNICH SEKCJI RAPORTU
+================================================
+
+SUGESTIA 1: Gesty wyświetlane na 0.3 sekundy na ekranie
+────────────────────────────────────────────────────────
+GDZIE: Sekcja 3 "Koncepcja eksperymentu i architektura systemu"
+       Podsekcja "Przepływ danych w systemie"
+
+ROZWINIĘCIE TEKSTU:
+Obecny tekst:
+"Ostatnim ogniwem jest moduł PyAutoGUI, który w odpowiedzi na sklasyfikowany 
+gest wysyła do systemu operacyjnego przerwanie symulujące odpowiedni skrót 
+klawiszowy lub ruch myszy."
+
+ZAPROPONOWAĆ ZMIANĘ NA:
+"Ostatnim ogniwem jest moduł PyAutoGUI, który w odpowiedzi na sklasyfikowany 
+gest wysyła do systemu operacyjnego przerwanie symulujące odpowiedni skrót 
+klawiszowy lub ruch myszy. Równolegle system wyświetla na żywo rozpoznany 
+gest z procentowym wskaźnikiem pewności na okres 0.3 sekundy, umożliwiając 
+użytkownikowi potwierdzenie poprawności rozpoznania nawet przy szybkich 
+ruchach dłoni."
+
+
+SUGESTIA 2: Hierarchiczna natura klasyfikacji gestów
+──────────────────────────────────────────────────────
+GDZIE: Sekcja 3 "Koncepcja eksperymentu i architektura systemu"
+       Podsekcja "Podział gestów" (lub nowa podsekcja "Hierarchia klasyfikacji")
+
+ROZWINIĘCIE TEKSTU:
+Dodać NOWY AKAPIT w podsekcji "Podział gestów":
+
+"Ważnym aspektem architekektury jest hierarchiczna natura procesu klasyfikacji. 
+System najpierw próbuje rozpoznać gesty dynamiczne (machnięcia w lewo/prawo) 
+poprzez analizę historii wektora ruchu. Tylko w przypadku, gdy klasyfikacja 
+gestu dynamicznego nie powiedzie się (lub dłoń jest w stanie spoczynkowym), 
+system przechodzi do testowania gestu szczypnięcia (click). Dopiero gdy 
+szczypnięcie również nie zostanie detektowane, system ocenia gesty natywne 
+modelu MediaPipe (Kciuk w górę/dół). Taka hierarchia zapobiega konfliktom 
+klasyfikacyjnym i poprawia ogólną niezawodność systemu."
+
+
+SUGESTIA 3: System obsługuje jedną dłoń naraz
+───────────────────────────────────────────────
+GDZIE: Sekcja 3 "Koncepcja eksperymentu i architektura systemu"
+       Podsekcja "Parametryzacja systemu"
+
+ROZWINIĘCIE TEKSTU:
+Obecny tekst zawiera punkty:
+- Rozdzielczość przetwarzania: 640x480 pikseli...
+- Próg pewności detekcji: Ustawiony na 0.7...
+- Docelowa płynność: 60 FPS...
+
+DODAĆ NOWY PUNKT:
+- Liczba rąk: System został skonfigurowany do obsługi maksymalnie jednej dłoni 
+  naraz (num_hands=1). Ograniczenie to służy optymalizacji wydajności 
+  i uproszczeniu logiki klasyfikacji gestów w scenariuszach z potencjalnie 
+  wieloma osobami na scenie.
+
+
+SUGESTIA 4: Rozszerzenie opisu inicjalizacji trackingu jako hlavnego bottlenecka
+──────────────────────────────────────────────────────────────────────────────────
+GDZIE: Sekcja 6 "Analiza problemów, wnioski i przypadki brzegowe"
+       Podsekcja "Wąskie gardła i wpływ oświetlenia"
+
+ROZWINIĘCIE TEKSTU:
+Obecny tekst:
+"Docelowe 60 FPS jest utrzymywane przez większość czasu działania programu. 
+Zauważalne spadki wydajności (do około 40-45 FPS) występują w momencie, 
+gdy dłoń pojawia się w kadrze po raz pierwszy - inicjalizacja mapowania 
+punktów jest najbardziej zasobożerna."
+
+ZAPROPONOWAĆ ROZSZERZENIE:
+"Docelowe 60 FPS jest utrzymywane przez większość czasu działania programu. 
+Największe spadki wydajności (do około 40-45 FPS) obserwuje się w momencie 
+inicjalizacji trackingu dłoni, czyli gdy dłoń pojawia się w kadrze po raz 
+pierwszy lub gdy system traci ślad dłoni z powodu wyświetlenia poza kadrem 
+i ponownie ją detektuje. 
+
+Ta inicjalizacja jest najbardziej zasobożerna, ponieważ model MediaPipe musi:
+(1) skanować cały obraz w poszukiwaniu regionów przydatnych do detekcji dłoni
+(2) inicjalizować sieć neuronową z wagami modelu
+(3) wyznaczać dokładne pozycje wszystkich 21 punktów charakterystycznych dłoni
+(4) kalibrować tracking w stosunku do względnego ruchu i perspektywy.
+
+W subsequent klatach, gdy dłoń jest już trackowana, koszt obliczeniowy maleje 
+o około 30-40%, ponieważ system operuje w trybie 'incremental update' 
+- aktualizuje pozycje na podstawie przewidywanej trajektorii z poprzedniej klatki, 
+zamiast szukać od zera."
+
+
+PODSUMOWANIE MAPOWANIA:
+═════════════════════════════════════════════════════════════════
+
+SUGESTIA 1 (0.3s display) → Sekcja 3, podsekcja "Przepływ danych"
+SUGESTIA 2 (Hierarchia)   → Sekcja 3, podsekcja "Podział gestów" (nowy akapit)
+SUGESTIA 3 (Jedna dłoń)   → Sekcja 3, podsekcja "Parametryzacja" (nowy punkt)
+SUGESTIA 4 (Bottleneck)   → Sekcja 6, podsekcja "Wąskie gardła..." (rozszerzenie)
+
+WSZYSTKIE SUGESTIE ZNAJDUJĄ SIĘ W SEKCJI 3 (3 sugestie) LUB SEKCJI 6 (1 sugestia)

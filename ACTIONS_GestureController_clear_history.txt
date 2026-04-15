@@ -1,0 +1,45 @@
+FILE: actions.py
+CLASS: GestureController
+METHOD: clear_history()
+LINES: 85-91
+
+PURPOSE:
+Placeholder method for clearing gesture history. Not actively used because wrist history 
+auto-expires old data instead of requiring explicit clearing on each frame.
+
+WHAT IT DOES:
+
+• Lines 85-91: Empty method implementation with informative comment
+
+• The comment explains the implementation strategy:
+  "Przy 60 FPS szybki ruch dłoni łatwo gubi pojedyncze klatki (motion blur).
+   Zamiast czyścić historię z każdej straconej ramki (co blokowało Swipe), 
+   pozwalamy wektorowi oczyścić się samemu po czasie >0.4s"
+   
+• Translation: "At 60 FPS, fast hand motion easily loses individual frames (motion blur).
+  Instead of clearing history from each lost frame (which blocked Swipe), 
+  we let the vector clear itself after >0.4s"
+
+WHY THIS APPROACH:
+
+• Clearing history on every missed frame would prevent swipe detection by losing motion data
+• Auto-expiration after 0.4 seconds (set in process_landmarks line 31) achieves:
+  - Prevents false swipe detections from stale historical data
+  - Allows complete swipe motion to be captured in wrist_history
+  - Automatically handles motion blur at 60 FPS without blocking gestures
+
+KEY CHARACTERISTICS:
+• Method exists but is intentionally not implemented (pass statement)
+• Called in main.py line 68 when no hand is detected
+• Motion history self-cleans via age-based filtering in process_landmarks
+• Design decision prioritizes gesture reliability over history cleanup
+• Represents defensive programming that maintains performance at high FPS
+
+NOTE ON 60 FPS CONSIDERATIONS:
+At 60 FPS (16.7ms per frame), camera and processing can miss individual frames due to:
+- Motion blur (fast hand movement)
+- Processing delays
+- System resource contention
+
+Traditional frame-by-frame clearing would lose swipe motion data. 
+Time-based auto-expiration preserves motion information while preventing stale data.

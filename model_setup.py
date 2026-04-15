@@ -6,9 +6,9 @@ def initialize_recognizer():
     model_url = "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task"
     model_path = "gesture_recognizer.task"
     if not os.path.exists(model_path):
-        print("Pobieranie modelu Gesture Recognizer...")
+        print("Downloading model...")
         urllib.request.urlretrieve(model_url, model_path)
-        print("Model zostal pobrany.")
+        print("Model downloaded.")
 
     BaseOptions = mp.tasks.BaseOptions
     GestureRecognizer = mp.tasks.vision.GestureRecognizer

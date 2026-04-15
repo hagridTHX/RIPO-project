@@ -1,0 +1,120 @@
+WERYFIKACJA SPRAWOZDANIA POD KĄTEM KODU
+=====================================
+
+SPRAWDZENIE POPRAWNOŚCI OPISANYCH GESTÓW I PARAMETRÓW:
+
+✅ GESTURES - POPRAWNIE OPISANE:
+- Machnięcie w lewo (swipe left):  Kod: dx < -0.15 && velocity < -0.6 → pyautogui.hotkey('browserback')
+- Machnięcie w prawo (swipe right): Kod: dx > 0.15 && velocity > 0.6 → pyautogui.hotkey('browserforward')
+- Szczypnięcie (pinch):             Kod: distance < 0.05 → pyautogui.click()
+- Kciuk w górę (Thumb Up):          Kod: top_gesture == "Thumb_Up" → pyautogui.scroll(120)
+- Kciuk w dół (Thumb Down):         Kod: top_gesture == "Thumb_Down" → pyautogui.scroll(-120)
+
+✅ PARAMETRY TECHNICZNE - POPRAWNIE OPISANE:
+- Rozdzielczość kamery:   Kod: cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640) i FRAME_HEIGHT, 480) → 640x480 px ✓
+- Próg pewności detekcji: Kod: min_hand_detection_confidence=0.7, min_hand_presence_confidence=0.7, min_tracking_confidence=0.7 → 0.7 (70%) ✓
+- Docelowe FPS:           Kod: target_fps = 60 ✓
+- Historia ruchu:         Kod: keep data < 0.4 seconds (current_time - history[0] < 0.4) ✓
+
+✅ ARCHITEKT GESTÓW - POPRAWNIE PODZIELONE:
+- Gesty ręcznie zaprogramowane (hardcoded):
+  * Machnięcia (Left/Right swipe) - analiza wektora ruchu nadgarstka
+  * Szczypnięcie (Click) - pomiar dystansu euklidesowego między palcami
+  ✓ Kod: Warunki logiczne `if distance < 0.05` i `if dx < -0.15 and velocity < -0.6` itp.
+
+- Gesty bazujące na modelu MediaPipe:
+  * Kciuk w górę (Thumb_Up)
+  * Kciuk w dół (Thumb_Down)
+  ✓ Kod: `if top_gesture == "Thumb_Up"` i `elif top_gesture == "Thumb_Down"`
+
+✅ DEBOUNCE TIMERY - POPRAWNIE OPISANE:
+- Click cooldown:  1.0 sekundy        → Kod: self.click_cooldown = 1.0 ✓
+- Scroll cooldown: 0.05 sekundy       → Kod: self.scroll_cooldown = 0.05 ✓
+- Swipe cooldown:  1.0 sekundy        → Kod: self.swipe_cooldown = 1.0 ✓
+
+✅ PRZEPŁYW DANYCH - POPRAWNIE OPISANY:
+Kamera → OpenCV (przechwyt) → MediaPipe (detekcja punktów) → GestureController (klasyfikacja) 
+→ PyAutoGUI (wysłanie akcji) ✓
+
+POTENCJALNE UWAGI DO RAPORTU:
+
+1. ⚠️  DISPLAYU GESTÓW - DODATKOWY Details:
+   Raport wspomina "wskaźnikiem pewności modelu" - kod faktycznie wyświetla to z dokładnością do 0.1%:
+   Kod: gesture_text = f'{controller.last_gesture} ({controller.last_gesture_confidence:.1%})'
+   
+   ULEPSZENIE W KODZIE od momentu testów: Dodano `gesture_display_duration = 0.3`
+   czyli gesty zostają wyświetlone na 0.3 sekundy nawet po zakończeniu gestu.
+   Raport tego aspektu nie wspomina - można dodać: "System wyświetla rozpoznany gest 
+   przez 0.3s co pozwala użytkownikowi na potwierdzenie rozpoznania nawet szybkich gestów"
+
+2. ⚠️  WĄSKIE GARDŁA - WAŻNA OBSERWACJA:
+   Raport słusznie zwraca uwagę na "inicjalizacja mapowania punktów jest najbardziej zasobożerna"
+   i "spadki wydajności (do około 40-45 FPS)". 
+   
+   W kodzie widać: `if results.hand_landmarks:` - to jest kluczowy punkt gdzie MediaPipe
+   wykonuje największy koszt obliczeniowy. Potwierdzenie: ✓
+
+3. ✅  ASYMETRIA THUMB_UP vs THUMB_DOWN - POPRAWNIE ZIDENTYFIKOWANA:
+   Raport: "Gest 'Kciuk w dół' jest rozpoznawany z niemal 90% skutecznością... 
+            Natomiast 'Kciuk w górę' wykazuje niższą dokładność"
+   
+   Kod: Jedyną różnicą jest `top_gesture == "Thumb_Up"` vs `top_gesture == "Thumb_Down"`
+   - brak różnicy w logice kodu, więc problem leży w modelu MediaPipe (jego training data)
+   
+   Potwierdzenie: ✓ Obserwacja jest trafna i wynika z asymetrii modelu, nie implementacji
+
+4. ⚠️  SYGNAŁ WEJŚCIOWY (OŚWIETLENIE) - BRAK MITYGACJI W KODZIE:
+   Raport słusznie identyfikuje: "Przy silnym oświetleniu z tyłu, kamera drastycznie zmniejsza expozycję"
+   
+   Kod: Brak implementacji wyrównywania histogramu lub adaptacyjnej korekcji kontrastu.
+   Możliwe ulepsszenia: cv2.equalizeHist() lub CLAHE dla preprocessing
+   
+   Raport poprawnie proponuje na Etap 3: wygładzanie danych ("filtrację matematyczną 
+   współrzędnych pomiędzy klatkami"). ✓
+
+5. ✅  POJEDYNCZE DŁOŃ VS WIELE DŁONI:
+   Kod: `num_hands=1` → system obsługuje tylko jedną dłoń
+   Raport tego nie wspomina explicite ale domyślnie mówi "dłoń użytkownika" (singular)
+   
+   Warte dodania: "System został zaprojektowany do obsługi jednej dłoni naraz"
+
+6. ⚠️  LOGIKA GESTÓW - WAŻNA OBSERWACJA:
+   Kod implementuje: `if gesture_recognized == ""` logika przejścia
+   
+   Znaczenie: System najpierw próbuje rozpoznać gestur dynamiczny (swipe),
+   DOPIERO jeśli nie udał się - próbuje Click, DOPIERO jeśli nie - próbuje Thumb gestures.
+   
+   To jest ważny flow - raport może to wyeksponować jako "hierarchiczna klasyfikacja gestów"
+   
+   Potwierdzenie: ✓ Raport wspomina "czasami nie są rejestrowane, ponieważ 
+   system zajęty jest klasyfikacją innego gestu" - to potwierdzenie obserwacji
+
+7. ⚠️  ZANIKA PROBLEM W KODZIE:
+   Historia wrist_history czyści się poprzez `self.wrist_history = []` 
+   PO UDANYM ROZPOZNANIU MACHNIĘCIA.
+   
+   ALE Problem: Jeśli machnięcie nie będzie rozpoznane, historia będzie się nagromadzać
+   (choć będzie filtrowana po 0.4s). W brzegowych przypadkach "zbyt szybki ruch"
+   historia może być pusta zanim się uzupełni - ✓ Raport to identyfikuje
+
+PODSUMOWANIE WERYFIKACJI:
+
+✅ WSZYSTKIE GŁÓWNE PARAMETRY ZGADZAJĄ SIĘ Z KODEM
+✅ OPIS GESTÓW JEST DOKŁADNY
+✅ ARCHITEKTURA JEST PRAWIDŁOWO OPISANA
+✅ OBSERWACJE O PROBLEMACH SĄ TRAFNE
+
+REKOMENDACJE DROBNYCH ULEPSZEŃ RAPORTU:
+
+1. Dodać informację że gesty wyświetlane są przez 0.3s na ekranie
+2. Wyjaśnić "hierarchiczną" naturę klasyfikacji gestów (swipe → click → thumb)
+3. Wyraźnie stwierdzić że "System obsługuje jedną dłoń naraz"
+4. Rozszerzyć opis "inicjalizacji trackingu" jako głównego wąskiego gardła
+
+OCENA OSTATECZNA: 9/10
+
+Raport bardzo dokładnie odzwierciedla kod. Wszystkie techniczne obserwacje są
+poprawne. Jedynie drobne szczegóły implementacyjne mogą być nieco rozszerzone.
+Raport jest gotowy do oddania.
+
+WNIOSEK: Sprawozdanie ZGADZA SIĘ Z KODEM ✓

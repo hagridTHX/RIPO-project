@@ -1,0 +1,137 @@
+FILE: actions.pyFILE: actions.py
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+| Thumb Down (static) | Scroll Down | 0.05 seconds || Thumb Up (static) | Scroll Up | 0.05 seconds || Thumb + Index Pinch | Mouse Click | 1.0 second || Right Swipe (fast) | Browser Forward | 1.0 second || Left Swipe (fast) | Browser Back | 1.0 second ||---------|--------|----------|| Gesture | Action | Cooldown |GESTURE ACTION SUMMARY:• Called continuously in main.py line 65 for every detected hand• Supports concurrent multi-hand processing in future with idx parameter• Prints timestamps for debugging and user feedback• All actions include debounce protection via cooldown timers• Static gestures use distance/classification for position-based detection• Dynamic gestures use velocity calculation for motion-based reliable detection• Processes one hand only (idx parameter = 0 for first hand detected)KEY CHARACTERISTICS:    Line 83: Enforces 0.05 second cooldown allowing fast scrolling    Line 82: Scrolls down by 120 pixels (negative scroll value)  Lines 81-83: THUMB_DOWN detected        Line 79: Enforces 0.05 second cooldown allowing fast scrolling    Line 78: Scrolls up by 120 pixels (positive scroll value)  Lines 77-79: THUMB_UP detected        Line 75: Enforces 1.0 second logging cooldown to reduce console spam    Line 74: Prints scroll direction ("w górę" for up, "w dół" for down)  Lines 72-75: THUMB_UP or THUMB_DOWN detected    Line 71: Extracts gesture category name (e.g., "Thumb_Up", "Thumb_Down")  Line 70: Gets top scored gesture classification for current hand at index 'idx'• Lines 69-83: THUMB GESTURES (if MediaPipe recognized hand gestures)    Line 68: Enforces 1.0 second cooldown between clicks    Line 67: Prints action with timestamp    Line 66: Sends mouse click command  Lines 64-67: If fingers pinched (distance < 0.05):    Line 63: Calculates Euclidean distance between thumb and index finger tips  Line 62: Extracts index finger tip landmark (index 8)  Line 61: Extracts thumb tip landmark (index 4)• Lines 61-65: PINCH-TO-CLICK detectionProcesses stationary hand gestures from MediaPipe classificationSTATIC GESTURES - PINCH AND THUMBS (Lines 59-83):    Line 57: Clears wrist_history to prevent duplicate detection    Line 56: Enforces 1.0 second cooldown between swipes    Line 55: Prints action with timestamp    Line 53: Sends 'browserforward' hotkey (browser forward button)  - Lines 52-56: RIGHT SWIPE detection (dx > 0.15, velocity > 0.6)        Line 47: Clears wrist_history to prevent duplicate detection    Line 46: Enforces 1.0 second cooldown between swipes    Line 45: Prints action with timestamp    Line 43: Sends 'browserback' hotkey (browser back button)  - Lines 39-50: LEFT SWIPE detection (dx < -0.15, velocity < -0.6)    - Line 37: Calculates time elapsed (dt) since oldest position  - Line 36: Calculates horizontal displacement (dx = current_x - oldest_x)  - Line 35: Gets oldest recorded wrist position and timestamp• Lines 34-56: Motion analysis (only if 3+ historical frames available)  - Removes stale position data older than 0.4 seconds  - Prevents history from growing indefinitely• Line 31: Filters wrist_history to keep only recent data (last 0.4 seconds)  - Tracks hand position with timestamps for velocity calculation• Line 28: Appends tuple of (current_time, wrist_x) to wrist_history list  - Used to detect left/right motion• Line 27: Extracts X-coordinate of wrist landmark (landmark index 0)Detects horizontal hand motion by analyzing wrist position velocity over timeDYNAMIC GESTURES - SWIPE DETECTION (Lines 27-56):• Line 24: Initializes gesture_recognized as empty string (no gesture detected yet)INITIALIZATION (Lines 24-25):WHAT IT DOES:and static (pinching, thumbs up/down) gestures.actions (mouse clicks, scrolling, page navigation). Processes both dynamic (swiping) Analyzes hand landmarks and recognized gestures to perform corresponding system controlPURPOSE:LINES: 23-99METHOD: process_landmarks()CLASS: GestureControllerCLASS: GestureController
+METHOD: __init__()
+LINES: 4-21
+
+PURPOSE:
+Initialize gesture controller with debounce timers and gesture history tracking to prevent
+accidental repeated actions from jittery gesture recognition.
+
+WHAT IT DOES:
+
+• Line 6: Sets PyAutoGUI.FAILSAFE to False
+  - Allows script to control mouse/keyboard without failsafe (corner trigger)
+  - Normally True for safety, but disabled here for uninterrupted gesture control
+  
+• Lines 9-10: Click debounce setup
+  - last_click_time: Tracks timestamp of last mouse click performed (Line 9)
+  - click_cooldown: Sets minimum 1.0 second between consecutive clicks (Line 10)
+  - Prevents accidental double-clicks from gesture jitter
+  
+• Lines 12-13: Scroll debounce setup
+  - last_scroll_time: Tracks timestamp of last scroll action (Line 12)
+  - scroll_cooldown: Sets minimum 0.05 second between consecutive scrolls (Line 13)
+  - Allows fast scrolling (20 scrolls per second at 60 FPS) while preventing spam
+  
+• Lines 15-16: Swipe debounce setup
+  - last_swipe_time: Tracks timestamp of last swipe gesture (Line 15)
+  - swipe_cooldown: Sets minimum 1.0 second between consecutive swipes (Line 16)
+  - Prevents accidental repeated page navigation from motion blur
+  
+• Lines 18-19: Logging cooldown setup
+  - last_log_time: Tracks when status was last printed (Line 18)
+  - log_cooldown: Prints status only every 1.0 second (Line 19)
+  - Reduces console spam during continuous thumb gestures
+  
+• Line 21: Initializes wrist_history as empty list
+  - Stores tuples of (timestamp, wrist_x_coordinate)
+  - Used to calculate hand velocity for swipe detection
+  - Tracks hand position over time (typically last 0.4 seconds of data)
+
+KEY CHARACTERISTICS:
+• All debounce timing values fine-tuned for 60 FPS operation
+• Scrolling has shortest cooldown (0.05s) allowing greatest responsiveness
+• Clicks and swipes have longest cooldown (1.0s) preventing accidental repetition
+• Wrist history enables velocity-based motion detection instead of simple position
+• Called once per program execution in main.py line 7

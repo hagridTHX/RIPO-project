@@ -1,0 +1,69 @@
+FILE: main.py
+FUNCTION: main()
+LINES: 5-70
+
+PURPOSE:
+Entry point of the application that sets up video capture, initializes gesture recognition,
+and processes video frames in real-time at 60 FPS.
+
+WHAT IT DOES:
+
+• Line 6: Initializes the gesture recognizer model and configuration options by calling 
+  initialize_recognizer() from model_setup.py
+  
+• Line 7: Creates a GestureController instance for handling gesture-based system actions
+
+• Lines 9-18: Defines HAND_CONNECTIONS list containing all 21 hand landmark connections 
+  that represent the skeleton structure of the hand
+  
+• Lines 20-22: Opens webcam device (0 = default camera) and sets video resolution 
+  to 640x480 pixels for consistent processing
+  
+• Lines 24-25: Initializes timing variables (prev_time and target_fps=60) for FPS 
+  calculation and regulation
+  
+• Line 27: Prints startup message in Polish, informing user that system is starting 
+  and instructions for exiting ('q' key)
+  
+• Lines 29-31: Main application loop that continuously reads frames from webcam
+  - Breaks loop if frame capture fails (no camera connected or camera blocked)
+  
+• Lines 34-37: FPS regulation and calculation
+  - Skips frame if too fast (not enough time has passed since last frame)
+  - Calculates actual FPS based on elapsed time between frames
+  
+• Line 39: Flips frame horizontally (creates mirror effect for better UX)
+
+• Line 40: Converts frame color from BGR (OpenCV format) to RGB (MediaPipe format)
+
+• Lines 42-43: Converts RGB frame into MediaPipe Image object with current timestamp 
+  in milliseconds (required format for gesture recognizer)
+  
+• Line 45: Runs gesture recognizer inference on the frame and gets results containing:
+  - Hand landmarks (21 points per detected hand)
+  - Recognized gesture classifications
+  
+• Lines 47-66: Hand skeleton rendering on video frame
+  - Checks if hand landmarks were detected
+  - For each detected hand (idx):
+    - Gets frame dimensions (height, width)
+    - Draws all connections (bones) between landmarks as red lines
+    - Draws all landmark points (joints) as green circles
+    - Calls controller.process_landmarks() to analyze gestures and perform actions
+    
+• Line 68: If no hand detected, clears gesture history in controller
+
+• Line 70: Displays FPS counter in top-left corner of frame (blue text)
+
+• Line 71: Shows video stream in OpenCV window titled 'RIPO Project - Sterowanie dlonmi'
+
+• Lines 73-74: Checks for 'q' key press to exit program gracefully
+
+• Lines 76-77: Cleanup - releases camera resource and closes all OpenCV windows
+
+KEY CHARACTERISTICS:
+• Runs at 60 FPS for smooth, responsive gesture recognition
+• Single-hand detection (HAND_CONNECTIONS supports visualizing one hand)
+• Real-time video overlay showing hand skeleton
+• Continuous loop until user presses 'q' key
+• Coordinates hand gesture processing with GestureController class

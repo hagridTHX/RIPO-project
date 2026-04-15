@@ -1,0 +1,93 @@
+FILE: model_setup.py
+FUNCTION: initialize_recognizer()
+LINES: 5-25
+
+PURPOSE:
+Initializes and configures the MediaPipe gesture recognizer model, automatically 
+downloading it from Google Cloud Storage if not already present locally.
+
+WHAT IT DOES:
+
+• Line 6: Defines model_url pointing to pre-trained gesture recognizer model hosted 
+  on Google Cloud Storage
+  - Full URL: https://storage.googleapis.com/mediapipe-models/gesture_recognizer/
+    gesture_recognizer/float16/1/gesture_recognizer.task
+  - Model file size approximately 50-100 MB
+  - Float16 precision (half-precision floats) for reduced file size and faster inference
+
+• Line 7: Sets model_path to "gesture_recognizer.task" 
+  - Model will be stored in project root directory for easy access
+
+• Lines 8-10: Checks if model already exists locally
+  - Line 8: Uses os.path.exists() to check if gesture_recognizer.task is in current directory
+  - If FALSE (model doesn't exist):
+    Line 9: Prints "Pobieranie modelu Gesture Recognizer..." (Polish: "Downloading...")
+    Line 10: Downloads model file from URL to local path using urllib.request.urlretrieve()
+    - First parameter: source URL
+    - Second parameter: destination file path
+    - Downloads blocking operation, waits until complete
+    Line 11: Prints "Model zostal pobrany." (Polish: "Model has been downloaded.")
+  - If TRUE (model exists): Skips download and proceeds
+
+• Lines 12-15: Imports MediaPipe task classes and utilities
+  Line 12: BaseOptions - Base configuration class for all MediaPipe task options
+  Line 13: GestureRecognizer - Main gesture recognition class that performs inference
+  Line 14: GestureRecognizerOptions - Configuration options for gesture recognizer
+  Line 15: VisionRunningMode - Enumeration of operating modes (IMAGE, VIDEO, LIVE_STREAM)
+
+• Lines 17-23: Creates GestureRecognizerOptions configuration object with parameters:
+  Line 18: base_options=BaseOptions(model_asset_path=model_path)
+    - Points to local model file path where gesture recognizer weights are stored
+    
+  Line 19: running_mode=VisionRunningMode.VIDEO
+    - Sets mode to VIDEO for processing video streams with timestamp data
+    - VIDEO mode enables temporal smoothing across frames (uses frame sequence context)
+    - Alternative modes: IMAGE (single frame), LIVE_STREAM (streaming events)
+    
+  Line 20: num_hands=1
+    - Limits detection to maximum 1 hand per frame
+    - Reduces computation and prevents multiple hand tracking
+    - Gets only most confident hand if 2+ hands present
+    
+  Line 21: min_hand_detection_confidence=0.7
+    - Requires 70% confidence to detect hand region in image
+    - Threshold prevents false hand detections
+    - Higher threshold = fewer false positives but might miss hands at angles
+    
+  Line 22: min_hand_presence_confidence=0.7
+    - Requires 70% confidence that hand exists in detected region
+    - Filters out ambiguous hand regions
+    
+  Line 23: min_tracking_confidence=0.7
+    - Requires 70% confidence to track hand landmarks across consecutive frames
+    - Ensures smooth tracking without jittery landmark coordinates
+
+• Line 25: Returns tuple containing:
+  - GestureRecognizer: Class used to instantiate recognizer in main.py
+  - options: Configured GestureRecognizerOptions object with all settings above
+
+KEY CHARACTERISTICS:
+• Model auto-downloads on first run (requires internet connection)
+• Stores model locally to avoid re-downloading on subsequent runs
+• All confidence thresholds set to 0.7 (70%) providing good balance between:
+  - Accuracy (higher thresholds reduce false positives)
+  - Responsiveness (lower thresholds catch more gestures)
+• 0.7 is sweet spot for real-time gesture control application
+• Returns objects immediately usable by main() line 6 to create recognizer instance
+• Called once at program startup to prepare gesture recognition pipeline
+
+CONFIDENCE TUNING:
+• 0.7 (current): Good balance for interactive gesture control
+• > 0.9: Very strict, might miss valid gestures
+• < 0.5: Loose, might detect false positives
+• Adjust thresholds higher if getting false detections
+• Adjust thresholds lower if gestures not being recognized
+
+MODEL SPECIFICATIONS:
+• Architecture: Gesture Recognizer with hand landmark detection
+• Input: Video frames in RGB format with hand region
+• Output: 
+  - 21 hand landmark coordinates (x, y, z, confidence)
+  - Gesture classification (e.g., Thumb_Up, Thumb_Down, Open_Palm, etc.)
+• Precision: Float16 (half-precision) for efficiency
+• Latency: ~10-50ms per frame depending on hardware

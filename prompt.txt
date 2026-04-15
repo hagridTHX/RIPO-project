@@ -1,0 +1,96 @@
+PROMPT FOR LLM - RIPO PROJECT STAGE 2 REPORT (POLISH)
+=====================================================
+
+Jesteś ekspertem w pisaniu raportów R&D dla uczelni. Twoim zadaniem jest stworzenie szczegółowego raportu etapu 2 projektu RIPO - systemu rozpoznawania gestów ręki do sterowania komputerem.
+
+OPIS APLIKACJI (NIE SZCZEGÓŁY KODU):
+Projekt RIPO to aplikacja działająca w czasie rzeczywistym, która korzysta z kamery internetowej do rejestrowania ruchu ręki użytkownika. System rozpoznaje gesty wykonywane ręką i automatycznie konwertuje je na polecenia systemowe:
+- Machnięcie ręką w lewo → powrót do poprzedniej strony w przeglądarce
+- Machnięcie ręką w prawo → przejście do następnej strony w przeglądarce
+- Szczypnięcie (zbliżenie kciuka i palca wskazującego) → kliknięcie myszki
+- Kciuk skierowany do góry → przewinięcie strony w górę
+- Kciuk skierowany w dół → przewinięcie strony w dół
+
+System pracuje w 60 FPS i wyświetla na żywo rozpoznane gesty wraz z procentowym wskaźnikiem pewności modelu.
+
+WYMAGANE SEKCJE RAPORTU (W JĘZYKU POLSKIM):
+
+1. WSTĘP I REDEFINICJA CELÓW (ok. 0.5 - 1 strona)
+   - Zwięzłe przypomnienie tematu projektu RIPO
+   - Czy po rozpoczęciu implementacji założenia musiały ulec zmianie?
+   - Przyczyny ewentualnych zmian w stosunku do Etapu 1
+   - Opis celów, które ma osiągnąć etap 2
+
+2. ANALIZA ZBIORU DANYCH / SYSTEM OPERACYJNY I SPRZĘT (ok. 2 - 3 strony)
+   UWAGA: W tym projekcie "zbiorem danych" są środowiska testowe i warunki, w jakich system będzie działać.
+   
+   - Charakterystyka środowiska testowego: Na jakim sprzęcie (kamera, procesor, system operacyjny) przeprowadzane są testy?
+   - Zmienne testowe: Jakie warunki oświetlenia będą badane? (ciemność, światło naturalne, światło sztuczne, jasne oświetlenie)
+   - Rozkład testów: Planuje się testowanie w różnych warunkach - scharakteryzować warunki minimum, średnie i optimalne
+   - Trudności napotkane: Jakie problemy mogą się pojawić przy testowaniu w rzeczywistych środowiskach?
+   - Przykłady wizualne: Opisać, w jakich warunkach oświetlenia system będzie testowany (od warunków słabych do idealnych)
+
+3. KONCEPCJA EKSPERYMENTU I ARCHITEKTURA SYSTEMU (ok. 1.5 - 2 strony)
+   - Opis przepływu danych w systemie (Pipeline): Od rejestracji kamery → przetwarzanie → rozpoznanie gestów → akcja
+   - Architektura: Wykorzystywany model MediaPipe ze wstępnie wytrenowanymi wagami
+   - Parametryzacja: Opisz parametry, które mogą wpływać na wydajność:
+     * Rozdzielczość kamery (640x480 px)
+     * Próg pewności detekcji (0.7 - 70%)
+     * Docelowe FPS (60 FPS)
+     * Różne rodzaje gestów: hardcoded (machnięcia, szczypniecie) vs. wytrenowane w modelu (Thumb Up, Thumb Down)
+   - Graficzna reprezentacja: Schemat blokowy przepływu informacji
+
+4. METODYKA BADAWCZA I PLAN TESTOWANIA (ok. 1 strona)
+   - Opis jak będzie oceniany prototyp (bez numerycznych metryk, poprzez obserwacje wideo)
+   - Jakie będą kryteria oceny działania systemu?
+   - Jak podzielony jest proces testowania na różne warunki?
+   - WAŻNE: Badania będą dokumentowane poprzez nagrania wideo, które pokazują zachowanie aplikacji w różnych warunkach
+   - Zdefiniuj co będzie obserwowane:
+     * Czy gesty są rozpoznawane poprawnie
+     * Jak oświetlenie wpływa na jakość detekcji gestów
+     * Jak wstępnie wytrenowane gesty (Thumb Up, Thumb Down) wpływają na poziom FPS w porównaniu do gestów hardcoded'owanych
+
+5. WYNIKI POMIARÓW I OBSERWACJI Z TESTÓW PROTOTYPU (ok. 3 - 4 strony)
+   - Prezentacja wyników testów jakościowych (na podstawie nagrań wideo aplikacji)
+   - Tabelaryczne zestawienie obserwacji w różnych warunkach oświetlenia
+   - Analiza wydajności FPS: Czy a kiedy następuje spadek FPS?
+   - Porównanie: Czy gesty hardcoded'owane (machnięcia, szczypniecie) działają lepiej niż wytrenowane (Thumb Up/Down)?
+   - UWAGA: Można wskazać, że Thumb Up jest mniej dokładny niż Thumb Down w pewnych warunkach
+   - Ocena działania w praktyce:
+     * Tabela obserwacji: Warunki testowe → Spostrzeżenia → Wpływ na działanie
+     * Zrzuty ekranów z aplikacji pokazujące rozpoznane gesty i wskaźniki pewności
+     * Fragmenty nagrań wideo lub opisy scen testowych
+
+6. ANALIZA PROBLEMÓW, WNIOSKI I PRZYPADKI BRZEGOWE (ok. 2 - 3 strony)
+   - Jakie problemy ujawniliśmy podczas testowania?
+   - Analiza False Positives: Kiedy system błędnie rozpoznaje gesty?
+   - Analiza False Negatives: Kiedy system nie rozpozna prawidłowego gestu?
+   - Wpływ oświetlenia: Jakie warunki oświetlenia powodują problemy z deteksją?
+   - Problem z Thumb Up vs Thumb Down: Czemu jeden jest mniej niezawodny?
+   - Wpływ na wydajność: Które gesty/warunki powodują spadek FPS?
+   - Wąskie gardła systemu: Gdzie leży największy problem - detekcja, wydajność, model czy sprzęt?
+   - Przypadki brzegowe: Opisz ekstremalnie trudne warunki (zbyt ciemno, zbyt jasno, szybkie ruchy itp.)
+
+7. MAPA DROGOWA NA ETAP 3 - PODSUMOWANIE (ok. 0.5 - 1 strona)
+   - Na podstawie znalezionych problemów - jakie konkretne ulepszenia należy implementować w etapie 3?
+   - Czy należy zmienić metodykę testowania dla następnego etapu?
+   - Jakie są techniczne "Next Steps"?
+   - Czy potrzebne są zmiany w algorytmach, parametrach czy sprzęcie?
+   - Priorityzacja: Co jest naprawą najwyższego priorytetu?
+
+WAŻNE WYTYCZNE:
+- Raport należy napisać w JĘZYKU POLSKIM
+- Nie wchodź w szczegóły kodu ani implementacji technicznej
+- Fokus na obserwacje praktyczne i rezultaty testów
+- Każda sekcja powinna odwoływać się do obserwacji z wideo-nagrań testów
+- Bądź konkretny - zamiast "działa dobrze", napisz "w warunkach jasnego oświetlenia (10000+ lux) system poprawnie rozpoznaje 95% gestów"
+- Załącz tabelaryczne zestawienia obserwacji
+- Wskaż wyraźnie problemy, które należy rozwiązać
+
+DODATKOWE UWAGI:
+- Raport będzie oceniany przez nauczyciela na uczelni, więc powinna być zawarta akademicka ścieżka myślenia
+- Każde stwierdzenie powinno być wsparte obserwacjami z testów
+- Jakość raportu zależy od szczegółowości opisu warunków testach i jakości obserwacji
+- Załącz wizualne materiały (zrzuty ekranu, opisy warunków testowych)
+
+Czy jesteś gotów do napisania raportu na podstawie tych wytycznych?

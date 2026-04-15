@@ -21,16 +21,13 @@ def main():
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     prev_time = 0
-    # ZWIĘKSZONO DO 60 FPS
     target_fps = 60 
-    
-    print("Uruchamianie sterowania systemem z 60 FPS... Program może teraz działać w tle. Wciśnij 'q' z aktywnym oknem podglądu, aby wyjść.")
 
     with GestureRecognizer.create_from_options(options) as recognizer:
         while cap.isOpened():
             success, frame = cap.read()
             if not success:
-                print("Nie można pobrać klatki z kamery.")
+                print("Cant receive frame")
                 break
 
             current_time = time.time()
@@ -51,7 +48,7 @@ def main():
                 for idx, hand_landmarks in enumerate(results.hand_landmarks):
                     h, w, _ = frame.shape
                     
-                    # Rysowanie nakładki na kamerze
+                    # Draw hand connections and landmarks
                     for connection in HAND_CONNECTIONS:
                         start_idx, end_idx = connection
                         start_point = hand_landmarks[start_idx]
@@ -65,13 +62,16 @@ def main():
                         cx, cy = int(landmark.x * w), int(landmark.y * h)
                         cv2.circle(frame, (cx, cy), 3, (0, 255, 0), cv2.FILLED)
                         
-                    # Wywołanie dedykowanej analizy i wciskania przycisków odzewu
-                    controller.process_landmarks(hand_landmarks, results.gestures, idx, current_time)
+                    # Process landmarks and recognize gestures (pass frame dimensions)
+                    controller.process_landmarks(hand_landmarks, results.gestures, idx, current_time, frame_height=h, frame_width=w)
             else:
-                controller.clear_history()
+                controller.last_gesture = "No gesture"
+                controller.last_gesture_confidence = 0.0
 
             cv2.putText(frame, f'FPS: {int(fps)}', (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
-            cv2.imshow('RIPO Project - Sterowanie dlonmi', frame)
+            gesture_text = f'{controller.last_gesture} ({controller.last_gesture_confidence:.1%})'
+            cv2.putText(frame, gesture_text, (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+            cv2.imshow('RIPO - Gesture Control', frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
