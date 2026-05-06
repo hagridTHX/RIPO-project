@@ -6,6 +6,7 @@ class GestureController:
     def __init__(self):
         # Disable fail-safe for uninterrupted gesture control
         pyautogui.FAILSAFE = False
+        pyautogui.PAUSE = 0  # No delay between actions for responsiveness
         self.last_gesture = "No gesture"
         self.last_gesture_confidence = 0.0
         self.last_gesture_time = 0
@@ -30,7 +31,7 @@ class GestureController:
         
         # Get screen dimensions for cursor control
         self.screen_width, self.screen_height = pyautogui.size()
-        self.cursor_smoothing = 0.3  # Smoothing factor (0-1): lower = more responsive, higher = smoother
+        self.cursor_smoothing = 0.8  # Smoothing factor (0-1): lower = more responsive, higher = smoother
         self.last_cursor_x = self.screen_width / 2
         self.last_cursor_y = self.screen_height / 2
         
@@ -106,6 +107,22 @@ class GestureController:
                 return velocity, (dx/dt, dy/dt)  # Return velocity and direction
         
         return 0.0, (0.0, 0.0)
+
+    def is_fist(self, hand_landmarks):
+        """
+        Matematyczne sprawdzenie, czy dłoń jest zaciśnięta.
+        Bada odległość opuszków palców od nadgarstka.
+        """
+        palm_x, palm_y = hand_landmarks[0].x, hand_landmarks[0].y
+        tips = [8, 12, 16, 20] # Wskazujący, środkowy, serdeczny, mały
+        
+        for tip in tips:
+            dist = math.hypot(hand_landmarks[tip].x - palm_x, hand_landmarks[tip].y - palm_y)
+            # Jeśli którykolwiek palec jest wyprostowany, odległość będzie znacznie większa
+            if dist > 0.16: 
+                return False
+        return True
+    
     def move_cursor_to_hand_position(self, hand_landmarks, current_time):
         """
         Direct cursor mapping with velocity-based momentum:
@@ -138,10 +155,10 @@ class GestureController:
         
         # Scale mapping - adjusted for 16:10 aspect ratio
         # Map hand's natural movement range to full screen
-        scale_x_min = 0.03
-        scale_x_max = 0.97
-        scale_y_min = 0.15    # Hand naturally starts ~15% from top
-        scale_y_max = 0.85    # Hand naturally reaches ~85% down
+        scale_x_min = 0.15
+        scale_x_max = 0.85
+        scale_y_min = 0.35    # Hand naturally starts ~15% from top
+        scale_y_max = 0.80    # Hand naturally reaches ~85% down
         
         # Map from camera range to screen range
         target_x = (hand_x - scale_x_min) / (scale_x_max - scale_x_min) * self.screen_width
@@ -162,7 +179,7 @@ class GestureController:
                    target_y * (1 - self.cursor_smoothing))
         
         # Move cursor only if changed significantly (reduce pyautogui calls)
-        if abs(smooth_x - self.last_cursor_x) > 0.5 or abs(smooth_y - self.last_cursor_y) > 0.5:
+        if abs(smooth_x - self.last_cursor_x) > 2.0 or abs(smooth_y - self.last_cursor_y) > 2.0:
             pyautogui.moveTo(int(smooth_x), int(smooth_y), duration=0)
         
         # Update position for next frame
@@ -170,79 +187,43 @@ class GestureController:
         self.last_cursor_y = smooth_y
     
     def process_landmarks(self, hand_landmarks, gestures, idx, current_time, frame_height=480, frame_width=640):
-        # Update frame dimensions if provided
         self.frame_width = frame_width
         self.frame_height = frame_height
         
         gesture_recognized = ""
         gesture_confidence = 0.0
 
-        # PRIORITY 1: Check for pinch-to-click (thumb + index VERY close AND all other fingers extended)
-        thumb_tip = hand_landmarks[4]
-        index_tip = hand_landmarks[8]
-        middle_tip = hand_landmarks[12]
-        ring_tip = hand_landmarks[16]
-        pinky_tip = hand_landmarks[20]
-        
-        palm_center = (hand_landmarks[0].x, hand_landmarks[0].y)
-        
-        pinch_distance = math.hypot(thumb_tip.x - index_tip.x, thumb_tip.y - index_tip.y)
-        middle_distance = math.hypot(middle_tip.x - palm_center[0], middle_tip.y - palm_center[1])
-        ring_distance = math.hypot(ring_tip.x - palm_center[0], ring_tip.y - palm_center[1])
-        pinky_distance = math.hypot(pinky_tip.x - palm_center[0], pinky_tip.y - palm_center[1])
-        
-        # For a real pinch click:
-        # - Thumb and index must be EXTREMELY close (< 0.035)
-        # - AND ALL other fingers must be clearly extended (> 0.12 each)
-        # This ensures it's a deliberate pinch, not a transition between gestures
-        all_fingers_extended = (middle_distance > 0.12 and ring_distance > 0.12 and pinky_distance > 0.12)
-        
-        if pinch_distance < 0.035 and all_fingers_extended:
-            gesture_recognized = "Click"
-            gesture_confidence = 1.0
-            if current_time - self.last_click_time > self.click_cooldown:
-                # Stop momentum when clicking (for precise clicks)
-                self.momentum_x = 0
-                self.momentum_y = 0
-                
-                # Check for double-click (two clicks within threshold)
-                time_since_last = current_time - self.second_click_time
-                if time_since_last < self.double_click_threshold:
-                    # This is a double-click!
-                    print(f"[{current_time:.1f}] Action: Double-Click")
-                    pyautogui.doubleClick()
-                    self.second_click_time = 0  # Reset for next sequence
-                else:
-                    # Single click
-                    print(f"[{current_time:.1f}] Action: Click (pinch: {pinch_distance:.3f})")
-                    pyautogui.click()
-                    self.second_click_time = current_time  # Set for potential next click
-                
-                self.last_click_time = current_time
-        
-        # PRIORITY 2: Check for swipes (wrist movement)
-        elif gesture_recognized == "":
+        top_gesture = "None"
+        if gestures and len(gestures) > idx:
+            top_gesture = gestures[idx][0].category_name
+            gesture_confidence = gestures[idx][0].score
+
+        # POPRAWKA 1: Pięść nie aktywuje się, jeśli wbudowany model widzi wyraźny gest kciuka
+        is_fist_now = (top_gesture == "Closed_Fist") or (self.is_fist(hand_landmarks) and top_gesture not in ["Thumb_Up", "Thumb_Down"])
+
+        # PRIORYTET 1: Swipy w przeglądarce (Tylko pięść)
+        if is_fist_now:
+            gesture_recognized = "Fist"
+            gesture_confidence = gesture_confidence if top_gesture == "Closed_Fist" else 1.0
+
             wrist_x = hand_landmarks[0].x
             self.wrist_history.append((current_time, wrist_x))
             
-            # Keep only recent 0.4 seconds of movement data
             self.wrist_history = [history for history in self.wrist_history if current_time - history[0] < 0.4]
 
-            # Calculate swipe velocity - need at least 2 points (reduced from 3)
             if len(self.wrist_history) > 1:
                 oldest_time, oldest_x = self.wrist_history[0]
                 dx = wrist_x - oldest_x
                 dt = current_time - oldest_time
                 
-                if dt > 0.03:  # Reduced from 0.04 to catch earlier
+                if dt > 0.03:  
                     velocity = dx / dt
                     
-                    # Much more lenient thresholds for fast swipes
                     if dx < -0.08 and velocity < -0.30:
                         gesture_recognized = "Left swipe"
                         gesture_confidence = 1.0
                         if current_time - self.last_swipe_time > self.swipe_cooldown:
-                            print(f"[{current_time:.1f}] Action: Browser back (velocity: {velocity:.2f})")
+                            print(f"[{current_time:.1f}] Akcja: Wstecz w przeglądarce (prędkość: {velocity:.2f})")
                             pyautogui.hotkey('browserback')
                             self.last_swipe_time = current_time
                         self.wrist_history = [] 
@@ -251,50 +232,94 @@ class GestureController:
                         gesture_recognized = "Right swipe"
                         gesture_confidence = 1.0
                         if current_time - self.last_swipe_time > self.swipe_cooldown:
-                            print(f"[{current_time:.1f}] Action: Browser forward (velocity: {velocity:.2f})")
+                            print(f"[{current_time:.1f}] Akcja: Dalej w przeglądarce (prędkość: {velocity:.2f})")
                             pyautogui.hotkey('browserforward')
                             self.last_swipe_time = current_time
                         self.wrist_history = []
+        else:
+            self.wrist_history = []
         
-        # PRIORITY 3: Check for thumb gestures (from MediaPipe classifier)
+        # PRIORYTET 2: Kliknięcie 
+        if gesture_recognized == "" and not is_fist_now:
+            # POPRAWKA 2: Obliczenie prędkości dłoni, aby zablokować fałszywe kliknięcia przy szybkim ruchu
+            hand_moving_fast = False
+            if len(self.position_history) >= 2:
+                dt_pos = current_time - self.position_history[0][0]
+                if dt_pos > 0:
+                    dx_pos = hand_landmarks[0].x - self.position_history[0][1]
+                    dy_pos = hand_landmarks[0].y - self.position_history[0][2]
+                    speed = math.hypot(dx_pos, dy_pos) / dt_pos
+                    if speed > 0.8:  # Jeśli prędkość przekracza 0.8, dłoń porusza się zbyt szybko
+                        hand_moving_fast = True
+
+            thumb_tip = hand_landmarks[4]
+            index_tip = hand_landmarks[8]
+            middle_tip = hand_landmarks[12]
+            ring_tip = hand_landmarks[16]
+            pinky_tip = hand_landmarks[20]
+            
+            palm_center = (hand_landmarks[0].x, hand_landmarks[0].y)
+            
+            pinch_distance = math.hypot(thumb_tip.x - index_tip.x, thumb_tip.y - index_tip.y)
+            middle_distance = math.hypot(middle_tip.x - palm_center[0], middle_tip.y - palm_center[1])
+            ring_distance = math.hypot(ring_tip.x - palm_center[0], ring_tip.y - palm_center[1])
+            pinky_distance = math.hypot(pinky_tip.x - palm_center[0], pinky_tip.y - palm_center[1])
+            
+            all_fingers_extended = (middle_distance > 0.12 and ring_distance > 0.12 and pinky_distance > 0.12)
+            
+            # Aktywuj kliknięcie tylko, gdy dłoń zwolniła (not hand_moving_fast)
+            if pinch_distance < 0.035 and all_fingers_extended and not hand_moving_fast:
+                gesture_recognized = "Click"
+                gesture_confidence = 1.0
+                if current_time - self.last_click_time > self.click_cooldown:
+                    self.momentum_x = 0
+                    self.momentum_y = 0
+                    time_since_last = current_time - self.second_click_time
+                    
+                    if time_since_last < self.double_click_threshold:
+                        print(f"[{current_time:.1f}] Akcja: Podwójne kliknięcie")
+                        pyautogui.doubleClick()
+                        self.second_click_time = 0 
+                    else:
+                        print(f"[{current_time:.1f}] Akcja: Kliknięcie (dystans: {pinch_distance:.3f})")
+                        pyautogui.click()
+                        self.second_click_time = current_time 
+                    self.last_click_time = current_time
+
+        # PRIORYTET 3: Skrolowanie (Kciuk)
         if gesture_recognized == "":
-            if gestures and len(gestures) > idx:
-                top_gesture = gestures[idx][0].category_name
-                gesture_confidence = gestures[idx][0].score
-                
-                if top_gesture == "Thumb_Up":
-                    gesture_recognized = "Thumb Up"
-                    if current_time - self.last_log_time > self.log_cooldown:
-                        print(f"[{current_time:.1f}] Action: Scroll up")
-                        self.last_log_time = current_time
+            if top_gesture == "Thumb_Up":
+                gesture_recognized = "Thumb Up"
+                if current_time - self.last_log_time > self.log_cooldown:
+                    print(f"[{current_time:.1f}] Akcja: Skrolowanie w górę")
+                    self.last_log_time = current_time
                     
-                    if current_time - self.last_scroll_time > self.scroll_cooldown:
-                        pyautogui.scroll(120) 
-                        self.last_scroll_time = current_time
-                        
-                elif top_gesture == "Thumb_Down":
-                    gesture_recognized = "Thumb Down"
-                    if current_time - self.last_log_time > self.log_cooldown:
-                        print(f"[{current_time:.1f}] Action: Scroll down")
-                        self.last_log_time = current_time
+                if current_time - self.last_scroll_time > self.scroll_cooldown:
+                    pyautogui.scroll(120) 
+                    self.last_scroll_time = current_time
                     
-                    if current_time - self.last_scroll_time > self.scroll_cooldown:
-                        pyautogui.scroll(-120) 
-                        self.last_scroll_time = current_time
+            elif top_gesture == "Thumb_Down":
+                gesture_recognized = "Thumb Down"
+                if current_time - self.last_log_time > self.log_cooldown:
+                    print(f"[{current_time:.1f}] Akcja: Skrolowanie w dół")
+                    self.last_log_time = current_time
+                    
+                if current_time - self.last_scroll_time > self.scroll_cooldown:
+                    pyautogui.scroll(-120) 
+                    self.last_scroll_time = current_time
         
-        # PRIORITY 4: If no other gesture detected, check for FULL OPEN HAND (cursor movement)
+        # PRIORYTET 4: Myszka (Otwarta dłoń)
         if gesture_recognized == "":
-            if self.detect_open_hand(hand_landmarks):
+            if top_gesture == "Open_Palm" or self.detect_open_hand(hand_landmarks):
                 self.move_cursor_to_hand_position(hand_landmarks, current_time)
                 gesture_recognized = "Cursor Mode"
                 gesture_confidence = 1.0
         
-        # Store last recognized gesture for display (keeps showing for duration)
+        # Aktualizacja stanu ekranowego
         if gesture_recognized:
             self.last_gesture = gesture_recognized
             self.last_gesture_confidence = gesture_confidence
             self.last_gesture_time = current_time
         elif current_time - self.last_gesture_time > self.gesture_display_duration:
-            # Clear gesture display after display duration expires
             self.last_gesture = "No gesture"
             self.last_gesture_confidence = 0.0
