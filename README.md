@@ -25,10 +25,15 @@ pip install -r requirements.txt
 
 4. Uruchom aplikację:
 ```
+W tle:
 python main.py
+
+W trybie debug
+python main.py --debug
 ```
 
 5. Wyjście:
 ```
-Naciśnij 'q' aby zamknąć
+Naciśnij 'q' aby zamknąć (tryb debug)
+Lub użyj skrótu klawiszowego Ctrl + Shift + Q dla trybu w tle
 ```
